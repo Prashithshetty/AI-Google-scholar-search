@@ -70,9 +70,9 @@ class AIResearcher:
         return response
 
     async def summarize_paper(self, title, abstract):
-        prompt = f"Summarize the following research paper titled '{title}':\n\n{abstract}"
+        prompt = f"Summarize the following research paper titled '{title}' into key points:\n\n{abstract}"
         messages = [
-            {"role": "system", "content": "You are an AI assistant that summarizes research papers."},
+            {"role": "system", "content": "You are an AI assistant that summarizes research papers into concise key points."},
             {"role": "user", "content": prompt}
         ]
         summary = self.ai_client.chat(messages)
