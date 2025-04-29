@@ -80,36 +80,71 @@ class AIResearcher:
 
 async def main():
     print("AI Enabled Researcher - Abstract Scraper with AI Integration")
+    researcher = AIResearcher(headless=True)
+    await researcher.initialize()
+
+    # Initial keyword input
     keyword = input("Enter research topic keyword: ").strip()
     if not keyword:
         print("Keyword cannot be empty.")
+        await researcher.close()
         return
 
-    researcher = AIResearcher(headless=True)
-    await researcher.initialize()
-    print(f"Searching Google Scholar for keyword: {keyword}")
-    results = await researcher.search_and_extract_abstracts(keyword, num_results=5)
+    conversation_history = [
+        {"role": "user", "content": f"I want to research the topic: {keyword}. Please ask me follow-up questions to refine the search."}
+    ]
+
+    # Generate follow-up question from AI
+    follow_up_question = await researcher.ask_follow_up(conversation_history)
+    print(f"\nAI Follow-up question: {follow_up_question}")
+
+    # Get user response to follow-up question
+    user_response = input("Your response: ").strip()
+    conversation_history.append({"role": "user", "content": user_response})
+
+    # Refine keyword based on user response (simple concatenation for demo)
+    refined_keyword = f"{keyword} {user_response}"
+
+    print(f"\nSearching Google Scholar for refined keyword: {refined_keyword}")
+    results = await researcher.search_and_extract_abstracts(refined_keyword, num_results=5)
 
     if not results:
         print("No results found.")
         await researcher.close()
         return
 
-    print("\nTop research papers and abstracts:")
-    for i, res in enumerate(results, 1):
+    # Analyze abstracts for relevance using AI (simple prompt)
+    relevant_papers = []
+    for res in results:
+        prompt = f"Given the research topic '{refined_keyword}', is the following paper relevant? Title: {res['title']}. Abstract: {res['snippet']}. Answer yes or no."
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that determines relevance of research papers."},
+            {"role": "user", "content": prompt}
+        ]
+        relevance = researcher.ai_client.chat(messages).lower()
+        if "yes" in relevance:
+            relevant_papers.append(res)
+
+    if not relevant_papers:
+        print("No relevant papers found after analysis.")
+        await researcher.close()
+        return
+
+    print("\nRelevant research papers and abstracts:")
+    for i, res in enumerate(relevant_papers, 1):
         print(f"\nPaper {i}:")
         print(f"Title: {res['title']}")
         print(f"URL: {res['url']}")
         print(f"Abstract snippet: {res['snippet']}")
 
     # Ask user if they want summaries
-    summarize = input("\nWould you like the AI to summarize each paper? (yes/no): ").strip().lower()
+    summarize = input("\nWould you like the AI to summarize each relevant paper? (yes/no): ").strip().lower()
     if summarize in ['yes', 'y']:
         print("\nGenerating summaries...")
-        for i, res in enumerate(results, 1):
+        for i, res in enumerate(relevant_papers, 1):
             title = res['title']
             abstract = res['snippet']
-            summary = await asyncio.get_event_loop().run_in_executor(None, researcher.summarize_paper, title, abstract)
+            summary = await researcher.summarize_paper(title, abstract)
             print(f"\nSummary of Paper {i} - {title}:\n{summary}")
 
     await researcher.close()
