@@ -15,9 +15,11 @@ class ResearchThread(QThread):
         self.keyword = keyword
 
     def run(self):
+        # Create a new event loop for this thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         researcher = AIResearcher(headless=True)
+        # Run the async initialize and research in the new event loop
         loop.run_until_complete(researcher.initialize())
         result_text = loop.run_until_complete(self.perform_research(researcher, self.keyword))
         loop.run_until_complete(researcher.close())
