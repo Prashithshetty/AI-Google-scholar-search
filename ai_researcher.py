@@ -102,11 +102,16 @@ async def main():
     user_response = input("Your response: ").strip()
     conversation_history.append({"role": "user", "content": user_response})
 
-    # Refine keyword based on user response (simple concatenation for demo)
-    refined_keyword = f"{keyword} {user_response}"
+    # Use AI to analyze user response and generate refined keywords
+    keyword_prompt = f"Extract key search keywords from this user response to use for Google Scholar search: \"{user_response}\""
+    keyword_messages = [
+        {"role": "system", "content": "You are an AI assistant that extracts concise search keywords from user input."},
+        {"role": "user", "content": keyword_prompt}
+    ]
+    refined_keywords = researcher.ai_client.chat(keyword_messages).strip()
 
-    print(f"\nSearching Google Scholar for refined keyword: {refined_keyword}")
-    results = await researcher.search_and_extract_abstracts(refined_keyword, num_results=5)
+    print(f"\nSearching Google Scholar for refined keywords: {refined_keywords}")
+    results = await researcher.search_and_extract_abstracts(refined_keywords, num_results=5)
 
     if not results:
         print("No results found.")
@@ -116,7 +121,7 @@ async def main():
     # Analyze abstracts for relevance using AI (simple prompt)
     relevant_papers = []
     for res in results:
-        prompt = f"Given the research topic '{refined_keyword}', is the following paper relevant? Title: {res['title']}. Abstract: {res['snippet']}. Answer yes or no."
+        prompt = f"Given the research topic '{refined_keywords}', is the following paper relevant? Title: {res['title']}. Abstract: {res['snippet']}. Answer yes or no."
         messages = [
             {"role": "system", "content": "You are an AI assistant that determines relevance of research papers."},
             {"role": "user", "content": prompt}
